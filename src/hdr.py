@@ -122,7 +122,7 @@ def readImagesAndTimes():
     # # List of exposure times
     times = np.array([ 30, 4, 1/2, 1/15], dtype=np.float32)
     # # List of image filenames
-    filenames = ["input/input1.png", "input/input2.png", "input/input3.png", "input/input4.png"]
+    filenames = ["../input/input1.png", "../input/input2.png", "../input/input3.png", "../input/input4.png"]
     
     images = []
     for filename in filenames:
@@ -134,7 +134,7 @@ def readImagesAndTimes():
 
 def main():
     images, times = readImagesAndTimes()
-    out_dir = "output_mountain"
+    out_dir = "../output"
     # Align input images
     # alignMTB = cv2.createAlignMTB()
     # alignMTB.process(images, images)

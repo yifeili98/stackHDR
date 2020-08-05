@@ -2,6 +2,10 @@
     text-align:  center !important;
 }
 
+.repimg {
+    max-width: 500px;
+}
+
 .hugebr {
     margin-top: 100px;
 }

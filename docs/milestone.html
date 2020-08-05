@@ -58,6 +58,9 @@
         <div class="col-lg-8 col-md-10 mx-auto">
           <div class="site-heading">
             <h1>Milestone</h1>
+              <p>Completed: Image Alignment, Camera Response Reconstruction</p>
+              <p>Todo: Radiance Map Reconstruction, Tone Mapping</p>
+              <p> Progress Status: On Track with Schedule</p>
           </div>
         </div>
       </div>
@@ -66,19 +69,75 @@
 
   <!-- Main Content -->
   <div class="container">
-    <h2 class="reptext">Process of HDR Stacking</h2>
-      <p class="reptext">To stack HDR images we need the following procedures:</p>
-      <div>
-        <ol>
-          <li><b>Image Alignment:</b> Although most photographers stack HDR images using the photos that they take using tripods. However, there could still be some pixels off between each photos taken, since the slight vibration of the ground, the wind, the slight vibration caused by the camera when taking photo, move of the object of the scene all contribute to change the image at screen space slightly. Therefore, it is essential that we align each photo to avoid ghost shadows in the result image.</li>
-            <br>
-            <li><b>Recovering Camera Response Curve:</b> </li>
-        </ol>
+    <h2 class="reptext">Image Alignment</h2>
+      <br>
+      <div class="reptext">
+          <p>Image alignment plays an important role in HDR stacking. We need to make sure that there is little or no ghost shadows caused by the vibration of camera or change of the scnene in the final HDR image. Therefore, I implemented a feature-based image alignment method with help from the ORB feature detector class in opencv.</p>
+          <p>ORB stands for Oriented FAST and Rotated BRIEF. FAST stands for locator in a feature point detector. The locator identifies the pixels on image that are stable under transformations like shift, scale and rotation, usually these highly distictive locations are the located at the sharp transition between a bright region and dark regions. BRIEF means descriptor in an ORB detector, the descriptor take those key points from the locator and turn those into feature vectors such that objects inside of the image can be represented.</p>
+          <p>The implementation is, I first convert the images into gray scale images, so the sharp edges of the image can be easier to detect, and choose a number of feature that I would like to detect for the ORB detector (comparison below). After detecting the points and compute the descriptors, I used the descriptor matcher provided by openCV to match the features. We need to sort the result of the matching and filter out those matches with low scores (higher distance between pixels). Finally, we compute the homography from one image onto another, and use the homography to generate aligned image.</p>
+          <br>
+          <h5>Image Alignment ON/OFF</h5>
+          <p>We can clearly see that the image without image alignment has a lot of ghost shadows on the left of the leaves and the image with alignment is producing a much better result.</p>
+          <div class="row">
+            <div class="col-6">
+                <img src="img/mountain_noalign.jpg">
+                <div class="caption">No Alignment</div>
+            </div>
+              <div class="col-6">
+                <img src="img/mountain_align.jpg">
+                <div class="caption">With Alignment</div>
+            </div>
+          </div>
+          <br>
+          <h5>Feature Number Comparison</h5>
+          <p>As we can see from the images below, a feature number as low as 200 cannot do the job at all. When feature number reaches 500, we can see that there's no ghost shadow at all in the image. However, a feature number of 500 is still not enough because we could see that the color of the image after stack processing is a little greener than normal, which could be caused due to insufficient feature number, which causes loss in the feature matching process. Therefore, I choose a feature number 20000 that is large enough so there is no loss in feature matching, and not as large as 40000 since we could see that there's not difference in output when we increase feature number from 20000 to 40000.</p>
+          <div class="row">
+            <div class="col-6">
+                <img class="repimg" src="img/align_200.jpg">
+                <div class="caption">feature_num = 200</div>
+            </div>
+              <div class="col-6">
+                <img class="repimg" src="img/align_500.jpg">
+                <div class="caption">feature_num = 500</div>
+            </div>
+          </div>
+          <br>
+          <div class="row">
+            <div class="col-6">
+                <img class="repimg" src="img/align_20000.jpg">
+                <div class="caption">feature_num = 20000</div>
+            </div>
+              <div class="col-6">
+                <img class="repimg" src="img/align_40000.jpg">
+                <div class="caption">feature_num = 40000</div>
+            </div>
+          </div>
       </div>
       <div class="hugebr"></div>
   </div>
-
-  <hr>
+    <br>
+    <div class="container">
+    <h2 class="reptext">Camera Response Curve Reconstruct</h2>
+      <br>
+      <div class="reptext">
+          <p>We need to reconstruct the camera response curve in order to quickly
+              convert pixel values to relative radiace to produce the HDR image.</p>
+          <p>For implementation of camera response curve reconstruction, I first sample points evenly over the images, get the value of each of the RGB channel and construct matrix correspondingly. For each photo, we also need the exposure time in order to correctly calculate the response curve. According to the equation below</p>
+          <img src="img/equation3.png">
+          <p>We could use SVD to compute the curve with appropriate weighting. Since we want the weighting to be low at Zmin and Zmax, and high at Zmin. I choose w = z+1 (@z&lt;128) and w = 256-z (@z&ge;128).</p>
+          
+          <br>
+          <h5>Curve Obtained</h5>
+          <p>By executing the algorithm stated above, I got a response curve of the aligned image (see above section) and the curve include three components, each of the three RGB channels.</p>
+          <div class="row">
+            <div class="col-12">
+                <img src="img/CRC.png">
+            </div>
+          </div>
+          <br>
+      </div>
+      <div class="hugebr"></div>
+  </div>
 
   <!-- Footer -->
   <footer>

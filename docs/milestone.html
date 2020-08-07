@@ -29,7 +29,7 @@
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
     <div class="container">
-      <a class="navbar-brand" href="index.html">HDR Project</a>
+      <a class="navbar-brand" href="index.html">HDR Project (Team# 001)</a>
       <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
         Menu
         <i class="fas fa-bars"></i>
@@ -69,50 +69,14 @@
 
   <!-- Main Content -->
   <div class="container">
-    <h2 class="reptext">Image Alignment</h2>
+    <h2 class="reptext">Clarification From Proposal</h2>
       <br>
-      <div class="reptext">
-          <p>Image alignment plays an important role in HDR stacking. We need to make sure that there is little or no ghost shadows caused by the vibration of camera or change of the scnene in the final HDR image. Therefore, I implemented a feature-based image alignment method with help from the ORB feature detector class in opencv.</p>
-          <p>ORB stands for Oriented FAST and Rotated BRIEF. FAST stands for locator in a feature point detector. The locator identifies the pixels on image that are stable under transformations like shift, scale and rotation, usually these highly distictive locations are the located at the sharp transition between a bright region and dark regions. BRIEF means descriptor in an ORB detector, the descriptor take those key points from the locator and turn those into feature vectors such that objects inside of the image can be represented.</p>
-          <p>The implementation is, I first convert the images into gray scale images, so the sharp edges of the image can be easier to detect, and choose a number of feature that I would like to detect for the ORB detector (comparison below). After detecting the points and compute the descriptors, I used the descriptor matcher provided by openCV to match the features. We need to sort the result of the matching and filter out those matches with low scores (higher distance between pixels). Finally, we compute the homography from one image onto another, and use the homography to generate aligned image.</p>
-          <br>
-          <h5>Image Alignment ON/OFF</h5>
-          <p>We can clearly see that the image without image alignment has a lot of ghost shadows on the left of the leaves and the image with alignment is producing a much better result.</p>
-          <div class="row">
-            <div class="col-6">
-                <img src="img/mountain_noalign.jpg">
-                <div class="caption">No Alignment</div>
-            </div>
-              <div class="col-6">
-                <img src="img/mountain_align.jpg">
-                <div class="caption">With Alignment</div>
-            </div>
-          </div>
-          <br>
-          <h5>Feature Number Comparison</h5>
-          <p>As we can see from the images below, a feature number as low as 200 cannot do the job at all. When feature number reaches 500, we can see that there's no ghost shadow at all in the image. However, a feature number of 500 is still not enough because we could see that the color of the image after stack processing is a little greener than normal, which could be caused due to insufficient feature number, which causes loss in the feature matching process. Therefore, I choose a feature number 20000 that is large enough so there is no loss in feature matching, and not as large as 40000 since we could see that there's not difference in output when we increase feature number from 20000 to 40000.</p>
-          <div class="row">
-            <div class="col-6">
-                <img class="repimg" src="img/align_200.jpg">
-                <div class="caption">feature_num = 200</div>
-            </div>
-              <div class="col-6">
-                <img class="repimg" src="img/align_500.jpg">
-                <div class="caption">feature_num = 500</div>
-            </div>
-          </div>
-          <br>
-          <div class="row">
-            <div class="col-6">
-                <img class="repimg" src="img/align_20000.jpg">
-                <div class="caption">feature_num = 20000</div>
-            </div>
-              <div class="col-6">
-                <img class="repimg" src="img/align_40000.jpg">
-                <div class="caption">feature_num = 40000</div>
-            </div>
-          </div>
-      </div>
+      <ul>
+        <li>Between single exposure HDR+ and the traditional multi-exposure HDR stacking, I choose to implement the multi-exposure one. </li>
+        <li>My focus: I will focus more on the image fusion part for this project, image alignment, radiance map reconstruction etc...</li>
+        <li>Input and Output: The inputs will be some image sequence that I found on internet (the images for people to play around with HDR stacking), and use those images to stack an HDR photo (using my implementation and openCV implementation to compare mapped radiance and dynamic range). Also compare my implementation of tone mapping with openCV version as a stretch goal.</li>
+        <li>Stretch Goal: There are brilliant tone mapping functions implemented by openCV, I will try to implement one of the methods myself, and to see the difference between my implementation with the openCV version, toned using the same radiance mapped HDR.</li>
+      </ul>
       <div class="hugebr"></div>
   </div>
     <br>
@@ -124,11 +88,11 @@
               convert pixel values to relative radiace to produce the HDR image.</p>
           <p>For implementation of camera response curve reconstruction, I first sample points evenly over the images, get the value of each of the RGB channel and construct matrix correspondingly. For each photo, we also need the exposure time in order to correctly calculate the response curve. According to the equation below</p>
           <img src="img/equation3.png">
-          <p>We could use SVD to compute the curve with appropriate weighting. Since we want the weighting to be low at Zmin and Zmax, and high at Zmin. I choose w = z+1 (@z&lt;128) and w = 256-z (@z&ge;128).</p>
+          <p>With the sampled data and the robust SVD algorithm of numpy, we could calculate a data-fitting equation for the response curve, which will be used as <i>g</i> term in Debevec's paper.</p>
           
           <br>
           <h5>Curve Obtained</h5>
-          <p>By executing the algorithm stated above, I got a response curve of the aligned image (see above section) and the curve include three components, each of the three RGB channels.</p>
+          <p>By executing the algorithm stated above, I got a response curve of an image and the curve include three components, each of the three RGB channels.</p>
           <div class="row">
             <div class="col-12">
                 <img src="img/CRC.png">
@@ -137,15 +101,51 @@
           <br>
       </div>
       <div class="hugebr"></div>
+  </div>    
+    <br>
+    <div class="container reptext">
+    <h2 >Radiance Mapping</h2>
+      <br>
+      <p>Now we have the <i>g</i> function recovered, we need to find a way to calculate the radiance for each pixel on our HDR image. The equation (6) in Debevec's paper tells us how to compute the result:</p>
+      <img src="img/equation6.png">
+      <p>We could simply reuse the weight function that we used in the camera response recovery procedure for better accuracy, where</p>
+      <img src="img/equation4.png">
+      <p>The procedure for mapping is to split the bgr channels for each images in the image sequence, also setting up a look up table for the weight (array of 256 integers) so the compute could be faster. For each image, we first look up each pixel value into the value in <i>g</i> function table. With help from the multiply function of numpy and LUT function of openCV, we could quickly compute the result for each image, and weight each pixel according to the weight table.</p>
+      <h4>Radiance Heat Map</h4>
+      <p>I converted the mapped radiance into a heat map to visualize the region with high radiance and low radiance mapping.</p>
+        <br>
+        <div class="row">
+        <div class="col-md-6">
+            <img src="img/rad1.jpg" class="repimg">
+        </div>
+        <div class="col-md-6">
+            <img src="img/rad2.jpg" class="repimg">
+        </div>
+      </div>
+        <br><br>
+      <div class="row">
+        <div class="col-md-6">
+            <img src="img/heat1.png" class="repimg">
+        </div>
+        <div class="col-md-6">
+            <img src="img/heat2.png" class="repimg">
+        </div>
+      </div>
+      <div class="hugebr"></div>
+        <h4>Radiance Mapped HDR image on OpenHDR</h4>
+        <p>We could see that the radiance mapped image has a wide dynamic range so it could present details at low-light region, but also could preserve detail at bright area. Now we need to consider proper tone mapping technique for a better looking image.</p>
+        <br>
+        <img src="img/hdr.gif" class="repimg">
   </div>
     <br>
     <div class="container">
-    <h2 class="reptext">Work Plan</h2>
+    <h2 class="reptext">Work Plan (and updated goals)</h2>
       <br>
       <div>
           <ol>
-            <li>Use the algorithm in Debevec's paper to implement radiance map reconstruction.</li>
-            <li>Compare my radiance map with </li>
+            <li>(Achieved Goal) Construct camera response curve (the <i>g</i> function in Debevec's paper) and radiance mapping.</li>
+            <li>(Goal In Progress) Implement MTB image alignment algorithm.</li>
+            <li>(Goal In Progress) Compare my HDR construction from the constructed HDR file by openCV, use the tool <a href="https://viewer.openhdr.org/" style="text-decoration: underline">OpenHDR</a> to compare the overall dynamic range.</li>
             <li>(Stretch Goal) Implement tone mapping using Drago's paper <a href="http://resources.mpi-inf.mpg.de/tmo/logmap/logmap.pdf" style="text-decoration: underline;">Adaptive Logarithmic Mapping For Displaying High Contrast Scenes</a> and compare with other tone mapping algorithms provided by openCV library.</li>
           </ol>
       </div>

@@ -111,7 +111,8 @@
       <p>We could simply reuse the weight function that we used in the camera response recovery procedure for better accuracy, where</p>
       <img src="img/equation4.png">
       <p>The procedure for mapping is to split the bgr channels for each images in the image sequence, also setting up a look up table for the weight (array of 256 integers) so the compute could be faster. For each image, we first look up each pixel value into the value in <i>g</i> function table. With help from the multiply function of numpy and LUT function of openCV, we could quickly compute the result for each image, and weight each pixel according to the weight table.</p>
-      <h4>Radiance Heat Map</h4>
+        <br>
+      <h4>Radiance Heat Map (<a href="/original.html" style="text-decoration: underline; color: darkblue">Original Images</a>)</h4>
       <p>I converted the mapped radiance into a heat map to visualize the region with high radiance and low radiance mapping.</p>
         <br>
         <div class="row">

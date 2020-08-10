@@ -1,54 +1,21 @@
 import numpy as np
 import cv2
+from myAlign import *
+from myToneMap import *
 from math import *
 from matplotlib.pyplot import *
+import time
 
 def debevecWeight(num):
     if num < 128:
         return num+1
     return 256-num
 
-def g(images, times, index, i, j):
-    b, g, r = images[index][i][j]
-    lb, lg, lr = log(b), log(g), log(r)
-    lt = log(times[index])
-    return [lb-lt, lg-lt, lr-lt]
-
-
-def alignImages(im1, im2):
-    # Convert images to grayscale
-    im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
-    im2Gray = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
-    
-    # Need a high feature to save the color
-    feature_num = 20000
-    orb = cv2.ORB_create(feature_num)
-    keypoints1, descriptors1 = orb.detectAndCompute(im1Gray, None)
-    keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
-    
-    # Match features.
-    matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
-    matches = matcher.match(descriptors1, descriptors2, None)
-    
-    # Sort matches by score
-    matches = sorted(matches, key=lambda x: x.distance)[:int(len(matches) * 0.6)]
-    
-    # Extract location of good matches
-    points1 = np.zeros((len(matches), 2), dtype=np.float32)
-    points2 = np.zeros((len(matches), 2), dtype=np.float32)
-
-    for i, match in enumerate(matches):
-      points1[i, :] = keypoints1[match.queryIdx].pt
-      points2[i, :] = keypoints2[match.trainIdx].pt
-    
-    # Find homography
-    h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
-
-    # wrap all pixels in one image to map it to the other
-    height, width, _ = im2.shape
-    im1Reg = cv2.warpPerspective(im1, h, (width, height))
-    
-    return im1Reg, h
+def debevecWeightArr(arr):
+    ret = []
+    for num in arr:
+        ret.append(debevecWeight(num))
+    return np.array(ret)
 
 def getResponseCurve(images, times):
     rows, cols, _ = images[0].shape
@@ -56,8 +23,8 @@ def getResponseCurve(images, times):
     ret = np.zeros((256,1,3), np.float32)
 
     sample_x, sample_y = [0]*100, [0]*100
-    col_num = int(sqrt(70*cols/rows))
-    row_num = int(70/col_num)
+    col_num = int(sqrt(20*cols/rows))
+    row_num = int(20/col_num)
 
     count = 0
     col = int((cols/col_num) / 2)
@@ -107,43 +74,83 @@ def getResponseCurve(images, times):
 
     for p in range(256):
         for bgr in range(3):
-            ret[p][0][bgr] = exp(res_split[bgr][p])
+            ret[p][0][bgr] = res_split[bgr][p]
 
     return ret
 
+def radianceMapReconstruction(images, times, responseCurve):
+    rows, cols, bgrs = images[0].shape
+    ret = np.zeros(images[0].shape, np.float32)
+    size = (rows, cols)
 
-def readImagesAndTimes():
-    # mountain shed
-    # times = np.array([1/40,1/160,1/640,1/2500], dtype=np.float32)
-    # mountain shed
-    # filenames = ["input_mountain/input1.jpg", "input_mountain/input2.jpg", "input_mountain/input3.jpg", "input_mountain/input4.jpg"]
+    # construct weight table for faster process
+    weights = np.zeros((256, 1), np.float32)
+    for i in range(256):
+        weights[i] = i+1 if i<128 else 256-i
 
+    # modify parameters for radiance mapping
+    ln_time = np.log(times)
+    result = np.zeros(images[0].shape, np.float32)
+    result_split = cv2.split(result)
+    weight_sum = np.zeros(size, np.float32)
 
-    # # List of exposure times
-    times = np.array([ 30, 4, 1/2, 1/15], dtype=np.float32)
-    # # List of image filenames
-    filenames = ["../input/input1.png", "../input/input2.png", "../input/input3.png", "../input/input4.png"]
-    
+    for j in range(len(images)):
+        split_img = cv2.split(images[j])
+        w = np.zeros(size, np.float32)
+
+        for bgr in range(bgrs):
+            split_img[bgr] = cv2.LUT(split_img[bgr], weights)
+            w += split_img[bgr]/3
+
+        response_img = cv2.LUT(images[j], responseCurve)
+        split_img = cv2.split(response_img)
+        for bgr in range(bgrs):
+            m = np.multiply(w, split_img[bgr]-ln_time[j])
+            result_split[bgr] += m
+        weight_sum += w
+    weight_sum = np.true_divide(1., weight_sum)
+
+    for bgr in range(bgrs):
+        result_split[bgr] = np.multiply(result_split[bgr], weight_sum)
+
+    result = np.exp(cv2.merge(result_split))
+    return result
+
+def convert(s):
+    try:
+        return float(s)
+    except ValueError:
+        num, denom = s.split('/')
+        return float(num) / float(denom)
+
+def readImagesAndTimes(filename):
     images = []
-    for filename in filenames:
-        images.append(cv2.imread(filename))
-  
+    times = [] # np.array([], dtype=np.float32)
+    with open(filename, "r") as f:
+        for line in f.readlines():
+            line = line.replace("\n", "")
+            content = line.split(" ")
+            images.append(cv2.imread(content[0]))
+            #times = np.append(times, convert(content[1]))
+            times.append(convert(content[1]))
+
+    if images == [] and times == []:
+        print("Error when retrieving image file info!")
     return images, times
 
 
 
 def main():
-    images, times = readImagesAndTimes()
-    out_dir = "../output"
-    # Align input images
-    # alignMTB = cv2.createAlignMTB()
-    # alignMTB.process(images, images)
-    for i in range(1, len(images)):
-        images[i-1],h = alignImages(images[i-1], images[i])
- 
+    assert filename != None
+    assert out_dir != None
+    print("Starting image alignment...")
+    images, times = readImagesAndTimes(filename)
+    # images = imageAlign(images)
+    alignMTB = cv2.createAlignMTB()
+    alignMTB.process(images, images)
+    print("Image alignment successful, starting CRC reconstruction...")
 
     # Obtain Camera Response Function (CRF)
-
     rc = getResponseCurve(images, times)
     for bgr in range(3):
         color = 'b-'
@@ -153,33 +160,50 @@ def main():
             color = 'r-'
         plot(range(256), rc[..., 0,bgr], color)
     xlabel('Pixel Value')
-    ylabel('Exposure Value')
+    ylabel('Log Irradiance')
     legend(['B', 'G', 'R'])
     title('Camera Response Curve')
     savefig('CRC.png')
+    print("Camera Response Curve is ready to view at cwd/CRC.png")
+    
+    
+    print("Starting radiance mapping...")
+    hdr = radianceMapReconstruction(images, times, rc)
+    print(hdr)
+    cv2.imwrite("radiance.hdr", hdr)
+    print("Radiance mapping complete!")
+    print("=========END OF IMAGE FUSION=========\n\n")
 
+    print("Processing my tone map...")
+    mytone = initiateDragoToneMapping(hdr)
+    cv2.imwrite(out_dir+"/my_hdr.jpg", mytone * 765)
 
-    # Merge images into an HDR linear image
-    mergeDebevec = cv2.createMergeDebevec()
-    hdrDebevec = mergeDebevec.process(images, times, rc)
-    # Save HDR image.
-    cv2.imwrite("hdrDebevec.hdr", hdrDebevec)
-
-    tonemapDrago = cv2.createTonemapDrago(1, 0.7)
-    ldrDrago = tonemapDrago.process(hdrDebevec)
+    print("Processing Drago's tone map...")
+    tonemapDrago = cv2.createTonemapDrago(1.0, 0.7)
+    ldrDrago = tonemapDrago.process(hdr)
     ldrDrago = 3 * ldrDrago
-    cv2.imwrite(out_dir+"/my_hdr.jpg", ldrDrago * 255)
+    cv2.imwrite(out_dir+"/ldr-Drago.jpg", ldrDrago * 255)
 
-     # Tonemap using Reinhard's method to obtain 24-bit color image
+    print("Processing Reinhard's tone map...")
     tonemapReinhard = cv2.createTonemapReinhard(1.5, 0,0,0)
-    ldrReinhard = tonemapReinhard.process(hdrDebevec)
+    ldrReinhard = tonemapReinhard.process(hdr)
     cv2.imwrite(out_dir+"/ldr-Reinhard.jpg", ldrReinhard * 255)
 
-    # Tonemap using Mantiuk's method to obtain 24-bit color image
+    print("Processing Mantiuk's tone map...")
     tonemapMantiuk = cv2.createTonemapMantiuk(2.2,0.85, 1.2)
-    ldrMantiuk = tonemapMantiuk.process(hdrDebevec)
+    ldrMantiuk = tonemapMantiuk.process(hdr)
     ldrMantiuk = 3 * ldrMantiuk
     cv2.imwrite(out_dir+"/ldr-Mantiuk.jpg", ldrMantiuk * 255)
 
+    # construct radiance map visualization
+    print("Constructing radiance heat map...")
+    result = cv2.imread("radiance.hdr")
+    rad_map = np.uint8(np.log(result)) + 1
+    norm = cv2.normalize(rad_map, None, 0, 190, cv2.NORM_MINMAX, cv2.CV_8UC1)
+    fc = cv2.applyColorMap(norm, cv2.COLORMAP_JET) 
+    cv2.imwrite("recover.png", fc)
+
 if __name__ == '__main__':
+    filename = str(sys.argv[1])
+    out_dir = str(sys.argv[2])
     main()

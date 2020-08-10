@@ -12,6 +12,10 @@
 
   <!-- Bootstrap core CSS -->
   <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link
+  rel="stylesheet"
+  href="bootstrap-toc-gh-pages/dist/bootstrap-toc.min.css"
+  />
 
   <!-- Custom fonts for this template -->
   <link href="css/all.min.css" rel="stylesheet" type="text/css">
@@ -24,9 +28,8 @@
 
 </head>
 
-<body>
-
-  <!-- Navigation -->
+<body data-spy="scroll" data-target="#toc">
+    
   <nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
     <div class="container">
       <a class="navbar-brand" href="index.html">HDR Project (Team# 001)</a>
@@ -44,6 +47,9 @@
           </li>
           <li class="nav-item">
             <a class="nav-link" href="finalreport.html">Final Report</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="reference.html">References</a>
           </li>
         </ul>
       </div>
@@ -63,19 +69,175 @@
       </div>
     </div>
   </header>
+    
+  <!-- Side Bar -->
+  <div class="container">
+    <div class="row">
+      <!-- sidebar, which will move to the top on a small screen -->
+      <div class="col-sm-2">
+        <nav id="toc" data-toggle="toc" class="sticky-top">
+          <ul class="nav navbar-nav">
+            <li><a class="nav-link active" href="#abstract">Abstract</a></li>
+            <li><a class="nav-link active" href="#process">Process of HDR</a></li>
+            <li><a class="nav-link active" href="#alignment">Image Alignment</a></li>
+            <li><a class="nav-link active" href="#response">CRC Reconstruct</a></li>
+            <li>
+              <a class="nav-link active" href="#radiance">Radiance Mapping</a>
+              <ul class="nav navbar-nav">
+                <li><a class="nav-link" href="#imp">Implementation</a></li>
+                <li><a class="nav-link" href="#heat">Heat Map</a></li>
+                <li><a class="nav-link" href="#openhdr">OpenHDR</a></li> 
+                <li><a class="nav-link" href="#problem">Problem&amp;Improvement</a></li> 
+              </ul>
+            </li>
+            <li><a class="nav-link active" href="#">Tone Mapping</a></li>
+          </ul>
+        </nav>
+      </div>
+      <!-- main content area -->
+      <div class="col-sm-10">
 
   <!-- Main Content -->
+    <div class="container">
+        <h2 id="abstract" class="reptext">Abstract</h2>
+        <p class="reptext">Thanks to the modern imaging devices like DSLR and cell phones, taking photos nowadays is easy and enjoyable. However, we have no way to alter the fact if there is a scene with high contrast of lighting, we will lose detail of the bright part of the image if we want to capture the detail at the dark part, and vice versa. Therefore, as we could increase exposure to get a more clear view of the scene under shadow, and decrease exposure to get a photo which shows detail of the brighter part, we could find a way to combine those two (or even more) images which contains detail for the entire scene, and this is why we want to achieve imaging with High Dynamic Range.</p>
+        <div class="hugebr"></div>
+    </div>
   <div class="container">
-    <h2 class="reptext">Process of HDR Stacking</h2>
+    <h2 id="process" class="reptext">Process of HDR Stacking</h2>
       <p class="reptext">To stack HDR images we need the following procedures:</p>
       <div>
         <ol>
           <li><b>Image Alignment:</b> Although most photographers stack HDR images using the photos that they take using tripods. However, there could still be some pixels off between each photos taken, since the slight vibration of the ground, the wind, the slight vibration caused by the camera when taking photo, move of the object of the scene all contribute to change the image at screen space slightly. Therefore, it is essential that we align each photo to avoid ghost shadows in the result image.</li>
             <br>
-            <li><b>Recovering Camera Response Curve:</b> In order to produce an HDR radiance map, we need to first reconstruct the camera response curve from the images. According to equation (3) of the paper <a href="http://www.pauldebevec.com/Research/HDR/debevec-siggraph97.pdf" style="text-decoration: underline;">Recovering High Dynamic Range Radiance Maps from Photographs</a> by Debevec and Malik, we could reconstruct the curve by </li>
+            <li><b>Recovering Camera Response Curve:</b> In order to produce an HDR radiance map, we need to first reconstruct the camera response curve from the images. According to equation (3) of the paper <a href="http://www.pauldebevec.com/Research/HDR/debevec-siggraph97.pdf" style="text-decoration: underline;">Recovering High Dynamic Range Radiance Maps from Photographs</a> by Debevec and Malik, we could reconstruct the curve by sample points on each of the images to get data points to fit for an equation, where the equation maps pixel values to the log irradiance values.</li>
+            <br>
+            <li><b>Radiance Mapping:</b> Once the relationship between pixel value and log irradiance is known, we could map the pixel value of each images and average with a weighting function to calculate the radiance value of a certain pixel in the final hdr image, according to equation (6) of Debevec's paper.</li>
+            <br>
+            <li><b>Tone Mapping:</b> PLACEHOLDER</li>
         </ol>
       </div>
       <div class="hugebr"></div>
+  </div>
+    
+    
+  <div class="container">
+    <h2 id="alignment" class="reptext">Image Alignment</h2>
+      <br>
+      <div class="reptext">
+          <p>Image alignment plays an important role in HDR stacking. We need to make sure that there is little or no ghost shadows caused by the vibration of camera or change of the scnene in the final HDR image. Therefore, I implemented a popular image alignment algorithm using Mean Threshold Bitmap (MTB).</p>
+          <p>In my implementaton, I first converted all images into grayscale, then calculate the median exposure among the exposure times of all the images, and set the median image as the base image. Each image will be performed shifting to align with the base image. Between each image and the base image, I used the median exposure to threshold the input, and create a binary threshold bitmap for each image. I built an image pyramid for each pair which tests 9 offsets of the non-base image and compare the sum of 1s of the xor of the two threshold bitmaps. Then I chose the offset that minimize the sum. I also made an excluding bitmap that eliminate the pixels which have values close to the median, which introduce noise to our algorithm, and I choose the value for exclusion to 4, as suggested by openCV (A smaller exclusion range will result in more noise, and larger exclusion range will cause image alignment to be not as accurate).</p>
+          <br>
+          <h5>Image Alignment ON/OFF</h5>
+          <p>As a result, image alignment makes the image look a lot better after radiance mapping and tone mapping. As I used the same exclusion range as the openCV implementation, the result for my alignment is pretty similar to the openCV result.</p>
+          <div class="row">
+            <div class="col-12">
+              <img src="img/noalign.jpg" class="repimg">
+              <div class="caption">No Alignment</div>
+            </div>
+          </div>
+          <br>
+          <div class="row">
+            <div class="col-6">
+                <img src="img/myalign.jpg" class="repimg">
+                <div class="caption">My Alignment Implementation</div>
+            </div>
+            <div class="col-6">
+                <img src="img/mtbalign.jpg" class="repimg">
+                <div class="caption">OpenCV MTB Alignment</div>
+            </div>
+          </div>
+          <div class="hugebr"></div>
+      </div>
+      <br><br>
+    <div class="container">
+    <h2 id="response" class="reptext">Camera Response Curve Reconstruct</h2>
+      <br>
+      <div class="reptext">
+          <p>We need to reconstruct the camera response curve in order to quickly
+              convert pixel values to relative radiace to produce the HDR image.</p>
+          <p>For implementation of camera response curve reconstruction, I first sample points evenly over the images, get the value of each of the RGB channel and construct matrix correspondingly. For each photo, we also need the exposure time in order to correctly calculate the response curve. According to the equation below</p>
+          <img src="img/equation3.png">
+          <p>With the sampled data and the robust SVD algorithm of numpy, we could calculate a data-fitting equation for the response curve, which will be used as <i>g</i> term in Debevec's paper.</p>
+          
+          <br>
+          <h5>Curve Obtained</h5>
+          <p>By executing the algorithm stated above on the hallway images from <a href="original.html" style="text-decoration: underline; color: darkblue">Original Images</a> section, I got a response curve of the image set and the curve include three components, each of the three RGB channels.</p>
+          <div class="row">
+            <div class="col-12">
+                <img src="img/CRC.png">
+            </div>
+          </div>
+          <br>
+      </div>
+      <div class="hugebr"></div>
+  </div>    
+    <br><br>
+    <div id="radiance" class="container reptext">
+        <h2>Radiance Mapping</h2>
+          <br>
+          <p>Now we have the <i>g</i> function recovered, we need to find a way to calculate the radiance for each pixel on our HDR image. The equation (6) in Debevec's paper tells us how to compute the result:</p>
+          <img src="img/equation6.png">
+          <p>We could simply reuse the weight function that we used in the camera response recovery procedure for better accuracy, where</p>
+          <img src="img/equation4.png">
+          <p>The procedure for mapping is to split the bgr channels for each images in the image sequence, also setting up a look up table for the weight (array of 256 integers) so the compute could be faster. For each image, we first look up each pixel value into the value in <i>g</i> function table. With help from the multiply function of numpy and LUT function of openCV, we could quickly compute the result for each image, and weight each pixel according to the weight table.</p>
+            <br>
+          <h4 id="heat">Radiance Heat Map (<a href="original.html" style="text-decoration: underline; color: darkblue">Original Images</a>)</h4>
+          <p>I converted the mapped radiance into a heat map to visualize the region with high radiance and low radiance mapping.</p>
+          <br>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/rad1.jpg" class="repimg">
+            </div>
+            <div class="col-md-6">
+                <img src="img/rad2.jpg" class="repimg">
+            </div>
+          </div>
+            <br><br>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/heat1.png" class="repimg">
+            </div>
+            <div class="col-md-6">
+                <img src="img/heat2.png" class="repimg">
+            </div>
+          </div>
+          <div class="hugebr"></div>
+            <h4 id="openhdr">Radiance Mapped HDR image on OpenHDR</h4>
+            <p>We could see that the radiance mapped image has a wide dynamic range so it could present details at low-light region, but also could preserve detail at bright area. Now we need to consider proper tone mapping technique for a better looking image.</p>
+            <br>
+            <img src="img/hdr.gif" class="repimg">
+            <br>
+            <div class="hugebr"></div>
+            <h4 id="problem">Problem Encountered and Improvement</h4>
+            <p>In this part, Debevec's paper brings up the method for calculating the mapped radiance value for each resulting pixel location, but the way that we assemble the pixels as a whole image is not in scope for the paper. I originally calculated the value for each pixel and put the value in each pixel into the resulting image matrix, which took very long time for large images (4000x3000) since this algorithm's time efficiency is in polynomial. After exploring more about the matrix manipulations, I found out that I could use look up table to speed up the weight matching and raw image pixel value matching by a lot, and perform matrix multiplication after using look up table reduces the time needed for process a large image (from 10 minutes to a few seconds).</p>
+        <div class="hugebr"></div>
+      </div>
+      <br><br>
+      <div class="container reptext">
+        <h2 >Tone Mapping</h2>
+          <br>
+          <h4>Dynamic Range of Different HDR images</h4>
+          <p>Below are some images that are radiance mapped with my implementation, I upload those images onto OpenHDR viewer, and we could see that some images could have more radiance value mapped at higher range, possibly because the lighting is good at the sight, and some images could have radiance values on lower range. This shows that my implementation successfully create HDR images which could cover a wide range for the radiance mapping, but this also means that we need proper tone mapping for those HDR images so the color content in the image is artistic.</p>
+          <br>
+          <div class="row">
+            <div class="col-md-12">
+                <img src="img/mountain_range.png" class="repimg">
+            </div>
+          </div>
+          <br><br><br>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/plaza_range.png" class="repimg">
+            </div>
+            <div class="col-md-6">
+                <img src="img/church_range.png" class="repimg">
+            </div>
+          </div>
+          
+        <div class="hugebr"></div>
+      </div>
+      
   </div>
 
 
@@ -89,9 +251,16 @@
       </div>
     </div>
   </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  
 
   <!-- Bootstrap core JavaScript -->
   <script src="js/bootstrap.bundle.min.js"></script>
+  <script src="bootstrap-toc-gh-pages/dist/bootstrap-toc.min.js"></script>
 
 </body>
 

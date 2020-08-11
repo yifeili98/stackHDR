@@ -1,0 +1,4 @@
+input/input1.png 30
+input/input2.png 4
+input/input3.png 1/2
+input/input4.png 1/15

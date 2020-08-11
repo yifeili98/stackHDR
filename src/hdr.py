@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import warnings
 from myAlign import *
 from myToneMap import *
 from math import *
@@ -125,15 +126,15 @@ def convert(s):
 
 def readImagesAndTimes(filename):
     images = []
-    times = [] # np.array([], dtype=np.float32)
+    times = np.array([], dtype=np.float32)
     with open(filename, "r") as f:
         for line in f.readlines():
             line = line.replace("\n", "")
             content = line.split(" ")
             images.append(cv2.imread(content[0]))
             #times = np.append(times, convert(content[1]))
-            times.append(convert(content[1]))
-
+            times = np.append(times, convert(content[1]))
+    times = times.astype("float32")
     if images == [] and times == []:
         print("Error when retrieving image file info!")
     return images, times
@@ -143,11 +144,11 @@ def readImagesAndTimes(filename):
 def main():
     assert filename != None
     assert out_dir != None
+    print("=========START OF IMAGE FUSION=========")
     print("Starting image alignment...")
     images, times = readImagesAndTimes(filename)
-    # images = imageAlign(images)
-    alignMTB = cv2.createAlignMTB()
-    alignMTB.process(images, images)
+    if align:
+        images = imageAlign(images)
     print("Image alignment successful, starting CRC reconstruction...")
 
     # Obtain Camera Response Function (CRF)
@@ -169,10 +170,9 @@ def main():
     
     print("Starting radiance mapping...")
     hdr = radianceMapReconstruction(images, times, rc)
-    print(hdr)
     cv2.imwrite("radiance.hdr", hdr)
     print("Radiance mapping complete!")
-    print("=========END OF IMAGE FUSION=========\n\n")
+    print("=========START OF TONE MAPPING=========")
 
     print("Processing my tone map...")
     mytone = initiateDragoToneMapping(hdr)
@@ -202,8 +202,13 @@ def main():
     norm = cv2.normalize(rad_map, None, 0, 190, cv2.NORM_MINMAX, cv2.CV_8UC1)
     fc = cv2.applyColorMap(norm, cv2.COLORMAP_JET) 
     cv2.imwrite("recover.png", fc)
+    print("Done!")
 
 if __name__ == '__main__':
+    warnings.filterwarnings("ignore")
     filename = str(sys.argv[1])
     out_dir = str(sys.argv[2])
+    align = True
+    if len(sys.argv)>3:
+    	align = False
     main()

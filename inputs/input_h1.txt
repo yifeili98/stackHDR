@@ -1,0 +1,4 @@
+input_h1/input1.jpg 1/250
+input_h1/input2.jpg 1/60
+input_h1/input3.jpg 1/15
+input_h1/input4.jpg 1

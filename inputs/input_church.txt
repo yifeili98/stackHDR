@@ -1,0 +1,13 @@
+input_deb/memorial0061.png 1/.03125
+input_deb/memorial0062.png 1/.0625
+input_deb/memorial0063.png 1/.125
+input_deb/memorial0064.png 1/.25
+input_deb/memorial0065.png 1/.5
+input_deb/memorial0066.png 1
+input_deb/memorial0067.png .5
+input_deb/memorial0068.png .25
+input_deb/memorial0069.png .125
+input_deb/memorial0070.png 1/16
+input_deb/memorial0071.png 1/32
+input_deb/memorial0072.png 1/64
+input_deb/memorial0073.png 1/128

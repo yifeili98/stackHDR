@@ -1,0 +1,4 @@
+input_mountain/input1.jpg 1/40
+input_mountain/input2.jpg 1/160
+input_mountain/input3.jpg 1/640
+input_mountain/input4.jpg 1/2500

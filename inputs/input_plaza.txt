@@ -1,0 +1,4 @@
+input_plaza/input1.jpg 1/30
+input_plaza/input2.jpg 1/4
+input_plaza/input3.jpg 2.5
+input_plaza/input4.jpg 15

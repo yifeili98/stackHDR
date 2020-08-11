@@ -32,7 +32,7 @@
     
   <nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
     <div class="container">
-      <a class="navbar-brand" href="index.html">HDR Project (Team# 001)</a>
+      <a class="navbar-brand" href="index.html">HDR Project (Team# 01)</a>
       <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
         Menu
         <i class="fas fa-bars"></i>
@@ -63,7 +63,7 @@
       <div class="row">
         <div class="col-lg-8 col-md-10 mx-auto">
           <div class="site-heading">
-            <h1>Final Report (In Progress)</h1>
+            <h1>Final Report</h1>
           </div>
         </div>
       </div>
@@ -79,8 +79,17 @@
           <ul class="nav navbar-nav">
             <li><a class="nav-link active" href="#abstract">Abstract</a></li>
             <li><a class="nav-link active" href="#process">Process of HDR</a></li>
-            <li><a class="nav-link active" href="#alignment">Image Alignment</a></li>
-            <li><a class="nav-link active" href="#response">CRC Reconstruct</a></li>
+            <li><a class="nav-link active" href="#alignment">Image Alignment</a>
+              <ul class="nav navbar-nav">
+                <li><a class="nav-link" href="#onoff">Alignment ON/OFF</a></li>
+                <li><a class="nav-link" href="#badsequence">Bad Img. Sequence</a></li>
+              </ul>
+              </li>
+            <li><a class="nav-link active" href="#response">CRC Reconstruct</a>
+              <ul class="nav navbar-nav">
+                <li><a class="nav-link" href="#curveimprove">Improvement</a></li>  
+              </ul>
+            </li>
             <li>
               <a class="nav-link active" href="#radiance">Radiance Mapping</a>
               <ul class="nav navbar-nav">
@@ -90,7 +99,14 @@
                 <li><a class="nav-link" href="#problem">Problem&amp;Improvement</a></li> 
               </ul>
             </li>
-            <li><a class="nav-link active" href="#">Tone Mapping</a></li>
+            <li><a class="nav-link active" href="#tone">Tone Mapping (Stretch Goal)</a>
+              <ul class="nav navbar-nav">
+                <li><a class="nav-link" href="#drago">Drago's Tone Mapping</a></li>
+                <li><a class="nav-link" href="#toneimplement">My Implementation</a></li>
+                <li><a class="nav-link" href="#toneimprove">Improvement</a></li>
+                <li><a class="nav-link" href="#tonecompare">Comparison</a></li>
+              </ul>
+              </li>
           </ul>
         </nav>
       </div>
@@ -114,7 +130,7 @@
             <br>
             <li><b>Radiance Mapping:</b> Once the relationship between pixel value and log irradiance is known, we could map the pixel value of each images and average with a weighting function to calculate the radiance value of a certain pixel in the final hdr image, according to equation (6) of Debevec's paper.</li>
             <br>
-            <li><b>Tone Mapping:</b> PLACEHOLDER</li>
+            <li><b>Tone Mapping:</b> After the radiance of each pixel location is mapped, we could find out that the resulting image matrix has value that is far different from normal image matrices. In normal representation, each of the RGB value is represented by one of the 256 integers in the range [0, 255], but the mapped radiance value could be a floating point value smaller than 0.01 or greater than 255 which could even reach 1000. This is good since we now have compatability for high dynamic ranges, but we need to come up with a way to map those irregular image values into the normal [0, 255] values that could fit onto our screenspace. This is called tone mapping.</li>
         </ol>
       </div>
       <div class="hugebr"></div>
@@ -125,10 +141,10 @@
     <h2 id="alignment" class="reptext">Image Alignment</h2>
       <br>
       <div class="reptext">
-          <p>Image alignment plays an important role in HDR stacking. We need to make sure that there is little or no ghost shadows caused by the vibration of camera or change of the scnene in the final HDR image. Therefore, I implemented a popular image alignment algorithm using Mean Threshold Bitmap (MTB).</p>
+          <p>Image alignment plays an important role in HDR stacking. We need to make sure that there is little or no ghost shadows caused by the vibration of camera or change of the scnene in the final HDR image. Therefore, I implemented a popular image alignment algorithm using Median Threshold Bitmap (MTB).</p>
           <p>In my implementaton, I first converted all images into grayscale, then calculate the median exposure among the exposure times of all the images, and set the median image as the base image. Each image will be performed shifting to align with the base image. Between each image and the base image, I used the median exposure to threshold the input, and create a binary threshold bitmap for each image. I built an image pyramid for each pair which tests 9 offsets of the non-base image and compare the sum of 1s of the xor of the two threshold bitmaps. Then I chose the offset that minimize the sum. I also made an excluding bitmap that eliminate the pixels which have values close to the median, which introduce noise to our algorithm, and I choose the value for exclusion to 4, as suggested by openCV (A smaller exclusion range will result in more noise, and larger exclusion range will cause image alignment to be not as accurate).</p>
           <br>
-          <h5>Image Alignment ON/OFF</h5>
+          <h5 id="onoff">Image Alignment ON/OFF</h5>
           <p>As a result, image alignment makes the image look a lot better after radiance mapping and tone mapping. As I used the same exclusion range as the openCV implementation, the result for my alignment is pretty similar to the openCV result.</p>
           <div class="row">
             <div class="col-12">
@@ -145,6 +161,22 @@
             <div class="col-6">
                 <img src="img/mtbalign.jpg" class="repimg">
                 <div class="caption">OpenCV MTB Alignment</div>
+            </div>
+          </div>
+          <br>
+          <h5 id="badsequence">Comparison using "Bad" Image Sequence</h5>
+          <p>I took a series of images of my home, with auto-focus feature "randomly" select the focal point on the scene(which could cause the angle of view of the view space change a little bit), and camera is set up on a tripod, photo taken with manually pressed shutter button (not using shutter cable). We could see that although with alignment algorithm, the aligned image still has some ghost shadows which is caused by the slight change of angle of view when auto focus are on different depth of the view, and manually pressed shutter could change the view by a lot(pixel-wise). However, we could clearly see that the alignment still improves the quality of the resulting image. We could see that the texture on my neighbor's wall and the plant on the fence (the right-most part of the image) appear to be blurry when there's no alignment, but appear normal when alignment is in effect.</p>
+          <div class="row">
+            <div class="col-12">
+                <img src="img/aligned_home.jpg" class="replargeimg">
+                <div class="caption">With Alignment</div>
+            </div>
+          </div>
+          <br>
+          <div class="row">
+            <div class="col-12">
+                <img src="img/noalign_home.jpg" class="replargeimg">
+                <div class="caption">No Alignment</div>
             </div>
           </div>
           <div class="hugebr"></div>
@@ -169,6 +201,18 @@
             </div>
           </div>
           <br>
+          <h5 id="curveimprove">Improvement</h5>
+          <p>The implementation by openCV samples a point per 70*70 pixels, this will sometimes get not enough data points and make the curve not as smooth as expected, so I decide to sacrifice a little bit of time efficiency and sample more points (one sample per 20*20 pixels) to obtain a more accurate response curve.</p>
+          <div class="row">
+            <div class="col-6">
+                <img src="img/my_curve.png" class="repimg">
+                <div class="caption">Improved Curve</div>
+            </div>
+            <div class="col-6">
+                <img src="img/opencv_curve.png" class="repimg">
+                <div class="caption">Original Curve</div>
+            </div>
+          </div>
       </div>
       <div class="hugebr"></div>
   </div>    
@@ -215,10 +259,10 @@
       </div>
       <br><br>
       <div class="container reptext">
-        <h2 >Tone Mapping</h2>
+        <h2 id="tone">Tone Mapping</h2>
           <br>
           <h4>Dynamic Range of Different HDR images</h4>
-          <p>Below are some images that are radiance mapped with my implementation, I upload those images onto OpenHDR viewer, and we could see that some images could have more radiance value mapped at higher range, possibly because the lighting is good at the sight, and some images could have radiance values on lower range. This shows that my implementation successfully create HDR images which could cover a wide range for the radiance mapping, but this also means that we need proper tone mapping for those HDR images so the color content in the image is artistic.</p>
+          <p>Below are some images that are radiance mapped with my implementation, I upload those images onto OpenHDR viewer, and we could see that some images could have more radiance value mapped at higher range, possibly because the lighting is good at the sight, and some images could have radiance values on lower range. This shows that my implementation successfully create HDR images which could cover a wide range for the radiance mapping, but this also means that we need proper tone mapping for those HDR images so the color content in the image can be fit into out display range and is artistic.</p>
           <br>
           <div class="row">
             <div class="col-md-12">
@@ -231,14 +275,98 @@
                 <img src="img/plaza_range.png" class="repimg">
             </div>
             <div class="col-md-6">
-                <img src="img/church_range.png" class="repimg">
+                <img src="img/home_range.png" class="repimg">
             </div>
           </div>
         <div class="hugebr"></div>
-          
-          <h4>Drago's Adaptive Logarithmic Mapping</h4>
-          <p></p>
-      </div>
+          <h4 id="drago">Drago's Adaptive Logarithmic Mapping</h4>
+          <p>The guideline for Drago's method is to come up with a mapping algorithm that provides consistend results despite the diversity of natural scenes and the possible radiance value inaccuracy in HDR images, and also to adaptable to address the evolution for future displaying methods. The algorithm scale scene luminance to image brighness, using a center-weighted scale factor for interactive tone mapping. Then we need to adjust the contrast between the bright part of the image and the dark part. The algorithm uses log to adjust the contrast, and Drago's research finds that if the base of the log is low, then the value of adjusted luminance will increase shaply and make exposure adjustment difficult, and if the log base is too high, the image will lose too much contrast so there will be color shift. Therefore, for a smooth interpolation among log base, they introduced a bias term which won't cause the tone mapping to fail as a result of incorrect log base.</p>
+        <div class="hugebr"></div>
+          <h4 id="toneimplement">Implementation</h4>
+          <p>The equation for my implementation is the same as Drago's implementation:</p>
+          <div class="row">
+            <div class="col-md-12">
+                <img src="img/tone_equation.png" class="repimg">
+            </div>
+          </div>
+          <p>Where the b term is the bias that we set manually, which changes the behavior of the resulting image. In my implementation, just like the equation suggests, I calculate each term of the equation, and adjust the result to cv2.CV_8UC3 type so it could be converted into LDR images.</p>
+        <div class="hugebr"></div>
+          <h4 id="toneimprove">Improvement</h4>
+          <p>The original implementation of Drago's algorithm requires user to manually set the bias for the resulting tone mapped image. I did some adjustment so there will be not manual setting necessary and the tone mapped image still has a high quality of mapping. For the bias term, the suggested value is between 0.5 and 1.0, where the higher value for the bias term will cause the image to look darker, and vice versa. To automatically adjust the term, I first find out the number of values in the image matrix that are greater than 255, and the number of values smaller than 0.01. Those values will be more likely to be mapped  to the higher/lower end of the overall dynamic range. I calculate the bright offset by dividing the number of values greater than 255 by (size(image)/2) and times 0.15, and take the minimum between this value and 0.15, and call result of this value <i>over_exposure_offset</i>. On the other hand, I calculate <i>under_exposure_offset</i> by dividing the number of values smaller than 0.01 and divide by size(image) and times 0.35. The resulting bias value will then be 0.85+<i>over_exposure_offset</i>-<i>under_exposure_offset</i>.</p>
+          <p>The intuition of my improvement is that, the more pixels with very high radiance values on the image, we then want to increase the bias term to make the mapped image look darker, and vice versa.</p>
+        <div class="hugebr"></div>
+          <h4 id="tonecompare">Comparison</h4>
+          <p>Besides my implementation and openCV implementation of Drago's tone mapping algorithm, I also include openCV implementation of Reinhard's algorithm and Mantiuk's implementation for tone mapping. As a result of the comparisons, my images look brighter than others when the scene is dark, and darker when the scene is bright. Among the three algorithms, Reinhard's method recovers color to closest of human perception, where Mantiuk's method always's havea grayish cover (probably a higher gamma value?), and drago's method has the artistic look of color.</p>
+          <br>
+          <h5>Plaza</h5>
+          <br>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_plaza/my_hdr.jpg" class="repimg">
+                <div class="caption">My Implementation</div>
+            </div>
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_plaza/ldr-Drago.jpg" class="repimg">
+                <div class="caption">Drago's Algorithm</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_plaza/ldr-Reinhard.jpg" class="repimg">
+                <div class="caption">Reinhard's Algorithm</div>
+            </div>
+              <div class="col-md-6">
+                <img src="img/tone_compare/output_plaza/ldr-Mantiuk.jpg" class="repimg">
+                <div class="caption">Mantiuk's Algorithm</div>
+            </div>
+          </div>
+          <br><br><br>
+          <h5>Memorial Church</h5>
+          <br>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_church/my_hdr.jpg" class="repimg">
+                <div class="caption">My Implementation</div>
+            </div>
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_church/ldr-Drago.jpg" class="repimg">
+                <div class="caption">Drago's Algorithm</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_church/ldr-Reinhard.jpg" class="repimg">
+                <div class="caption">Reinhard's Algorithm</div>
+            </div>
+              <div class="col-md-6">
+                <img src="img/tone_compare/output_church/ldr-Mantiuk.jpg" class="repimg">
+                <div class="caption">Mantiuk's Algorithm</div>
+            </div>
+          </div>
+          <br><br><br>
+          <h5>Mountain</h5>
+          <br>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_mountain/my_hdr.jpg" class="repimg" style="max-width: 400px;">
+                <div class="caption">My Implementation</div>
+            </div>
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_mountain/ldr-Drago.jpg" class="repimg" style="max-width: 400px;">
+                <div class="caption">Drago's Algorithm</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+                <img src="img/tone_compare/output_mountain/ldr-Reinhard.jpg" class="repimg" style="max-width: 400px;">
+                <div class="caption">Reinhard's Algorithm</div>
+            </div>
+              <div class="col-md-6">
+                <img src="img/tone_compare/output_mountain/ldr-Mantiuk.jpg" class="repimg" style="max-width: 400px;">
+                <div class="caption">Mantiuk's Algorithm</div>
+            </div>
+          </div>
+        </div>
       
   </div>
 

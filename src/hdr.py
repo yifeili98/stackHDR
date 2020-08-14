@@ -24,8 +24,8 @@ def getResponseCurve(images, times):
     ret = np.zeros((256,1,3), np.float32)
 
     sample_x, sample_y = [0]*100, [0]*100
-    col_num = int(sqrt(20*cols/rows))
-    row_num = int(20/col_num)
+    col_num = int(sqrt(70*cols/rows))
+    row_num = int(70/col_num)
 
     count = 0
     col = int((cols/col_num) / 2)

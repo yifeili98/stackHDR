@@ -82,7 +82,7 @@ def imageAlign(images):
 			shift = np.append(shift, np.array([0, 0]))
 		else:
 			g = cv2.cvtColor(images[i], cv2.COLOR_BGR2GRAY)
-			temp_shift = calculateShift(gray, g)
+			temp_shift = align.calculateShift(gray, g)
 			shift = np.append(shift, temp_shift)
 			ts = (temp_shift[0], temp_shift[1])
 			ret[i] = align.shiftMat(images[i], ts)
